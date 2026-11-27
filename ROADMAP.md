@@ -2,7 +2,7 @@
 
 ## 当前阶段
 
-喜马拉雅公开有声书插件及六源订阅已推送到 `origin/master`，线上文件与本地产物一致；懒人听书已适配目录但匿名播放受登录限制，未列入可用订阅。Android 端内验收仍待完成。
+六源插件与订阅已推送，懒人听书仍受登录限制。个人版内置六源 ARM64 APK 已构建、个人签名并核对；当前 15 个原生库均未支持 16 KB 对齐，仅交付用户确认的个人测试包，Android 16 真机验收未完成。本轮个人版代码尚未提交推送。
 
 ## 已完成
 
@@ -206,3 +206,46 @@
 - 推送前重新构建成功，63 项多源及有声书离线测试通过，工作区无代码变动。
 - 线上六源订阅与喜马拉雅 JS 均 HTTP 200，内容与本地产物一致；订阅包含喜马拉雅 `0.1.0`，未包含受登录限制的懒人听书。
 - 在线订阅沿用 `https://raw.githubusercontent.com/xiaogc123/MusicFree/refs/heads/master/plugins/plugins.json`，更新订阅即可取得新增喜马拉雅插件。原生播放验收限制不变。
+
+## Android 16 APK 获取与静态核验（2026-11-27）
+
+- 用户要求提供 Android 16 APK；本机有 Java 与 Node.js，但未发现 Android SDK、adb、应用 node_modules 和发布签名配置，未从当前仓库编译，也未改动应用源码、签名或系统配置。
+- 从官方 GitHub Release 下载 ARM64 稳定版 `v0.6.2` 和测试版 `v1.0.0-beta.4` 至忽略目录 `tmp/android-apk/`；均与 GitHub 附件提供的 SHA-256、文件大小一致，ZIP 完整性通过。
+- 稳定版 15 个 ARM64 ELF 原生库均未达到 16 KB 对齐；测试版 28 个 ARM64 原生库均达到 16 KB ELF 对齐，作为更适合新设备的候选包交付，不将静态检查等同于 Android 16 真机兼容验收。
+- 测试版文件 `MusicFree-v1.0.0-beta.4-arm64-v8a.apk`，27352715 字节，SHA-256：`e5517f558ff7c11f138ce0a6e44754a44e00fb82df25cf038739edae260e883c`。
+- 安装包为官方未修改版本，未内置本项目订阅；安装后仍需自行添加六源订阅。测试版的插件兼容、数据迁移与 Android 16 实际安装／播放尚未验证。本轮记录未提交推送。
+
+### APK 进一步验证（2026-11-27）
+
+- 用户要求先验证。检查 PATH、常见 Android SDK／AVD／模拟器目录与相关进程，未发现可用 adb、模拟器或设备连接；未进行真机安装与启动，不宣称 Android 16 端到端验证通过。
+- 在临时目录使用 Google 官方 `apksig 8.7.3`，以 API 36 作为签名验证范围，`1.0.0-beta.4` 与 `0.6.2` 均通过 APK v2 签名验证。
+- 两版本签名证书 SHA-256 一致：`5a21071009acae624ec8ad21d73e5b95bbce992c050eab7aab7e1df2d8900a1a`。这不代表已核对用户当前安装包证书，也不保证数据迁移。
+- 测试版 28 个 ARM64 ELF 原生库均达到 16 KB 对齐，库文件均为压缩存储，不涉及未压缩库 ZIP 偏移对齐。该检查只证明静态条件，不代替安装、播放、后台运行和插件兼容验收。
+- 解析实际二进制清单：测试版包名 `fun.upup.musicfree`、`versionCode=400011`、`minSdkVersion=24`、`targetSdkVersion=36`，未声明 `testOnly`／`debuggable`；`extractNativeLibs=true`。稳定版同包名与版本码、目标 API 为 30。
+- 签名验证程序、工具 JAR 与清单解析结果保存在忽略目录 `tmp/android-apk/`，未安装全局工具、未修改系统配置。本轮文档尚未提交推送。
+
+## 个人版内置六源 APK（进行中，2026-11-27）
+
+- 用户批准个人自用独立版。基于当前 `0.6.2` 源码，包名 `fun.upup.musicfree.personal`、显示名称「MusicFree 个人版」，与官方应用并存；不将其称为官方 1.0 测试版。
+- 已编写六源 assets 生成、启动安装及个人构建参数，沿用插件管理器本地安装路径。个人版才执行离线安装，逐项记住安装结果，保留已有插件、用户卸载和在线更新；首次登记统一订阅。
+- 5 项初始化与资源一致性回归通过，覆盖部分失败重试、已有版本保留、主动卸载不恢复、订阅重试和六源资源逐字一致。
+- npm 既有锁文件缺失跨平台可选依赖，`npm ci` 失败；已通过现有 Yarn 锁文件安装应用依赖，未修改依赖版本或锁文件。SDK、NDK 26.1、JDK17 与 Gradle 8.10.2 均准备在项目临时目录，不修改系统全局配置。
+- 完整 TypeScript 检查与 99 项回归通过（内置初始化 5、多源／有声书 63、网易云 31）；`tsconfig.json` 排除工具缓存 `tmp` 与依赖目录，保留原 Pods 排除，避免将 SDK 自带 JavaScript 当作应用源码检查。
+- 原生构建通过：第一次因 JDK 自动下载及依赖网络等待改用便携 JDK17 并开启详细日志重试，保留缓存；后通过 React Native 本地 Maven 参数解决大 AAR 下载瓶颈。最终 `assembleRelease -PpersonalBuild=true -PreactNativeArchitectures=arm64-v8a` 为 `BUILD SUCCESSFUL`，1468 个任务中 1418 个执行、50 个复用，未关闭编译或 Lint 检查。
+- 用户确认暂无设备，先生成 APK，不进行 Android 16 真机验收。
+- Hermes AAR 的 Maven Central 下载速度异常缓慢，改从项目已有阿里云镜像预取相同 React／Hermes `0.76.5` 发布包，均核对原始 Maven 模块元数据 SHA-512 一致；使用 React Native 自带 `react.internal.mavenLocalRepo` 参数指向忽略目录，不修改依赖版本。
+- 静态检查已确认当前 React／Hermes 预编译核心库共 7 个 ARM64 `.so` 未达到 16 KB ELF 对齐，因此个人包只能作为尚待实机验证的测试包，不宣称完整 Android 16／16 KB 兼容；升级播放器基础依赖需另行规划。
+- 用户已确认签名当前测试包，已生成仅本地保存的个人签名材料及签名 APK；源码尚未提交或推送。Android 16 真机／模拟器验收未完成，16 KB ELF 对齐检查未通过。
+- ARM64 未签名产物 `android/app/build/outputs/apk/release/app-arm64-v8a-release-unsigned.apk`，18192178 字节，SHA-256：`20a97fcf8f2120f091def37b4312aed3128d7f5811f49118684bcf5f86cb290a`。
+- 成品 ZIP 完整性通过；六个内置 JS 与已验证产物逐字一致，Hermes 字节码中包含个人版初始化入口。实际二进制清单：包名 `fun.upup.musicfree.personal`、版本 `0.6.2-personal`、minSdk 24、targetSdk 30、compileSdk 35，仅 ARM64；Provider 均使用个人包名前缀。
+- APK 中最终 15 个 ARM64 原生库均未达到 16 KB ELF 对齐。当前不是通用 Android 16／16 KB 兼容交付；已明确告知用户，用户选择“允许签名当前个人测试包”，授权创建仅本地保存的个人签名材料。
+- 签名目录 `android/.signing-personal/` 已加入 Git 忽略并限制为当前用户访问；未覆盖旧密钥，未打印凭据。后续更新个人版需保留同一签名材料，密码不进入构建命令或日志。
+- 签名成品 `tmp/personal-build/output/MusicFree-0.6.2-personal-arm64-v8a.apk`，18306437 字节，SHA-256：`82a5a2216787a83c278bf90e62fe3fc539c12ec16e8de16387dd8918ba3752bd`。SDK apksigner 验证 v2／v3 通过；以 API 36 范围复核 v3 通过；ZIP 对齐和 ZIP 完整性通过，六源 JS 与本地已验证文件一致，初始化入口仍在 Hermes 包中。
+- 个人签名证书 SHA-256：`09bd819e2b2c3345c44a6008415bbde5f3b4acaff1098961b89304b4be74da0e`。证书为个人包独立签名，不与官方包混用。
+
+### 个人版独立分支提交前验收（2026-11-27）
+
+- 用户在独立分支讨论后授权推送，创建 `codex/personal-apk` 承载个人版改动，目标为 `origin/codex/personal-apk`，不修改远端 `master`。
+- 提交前 TypeScript 检查与 99 项回归再次通过；个人版 ARM64 `assembleRelease` 再次 `BUILD SUCCESSFUL`，1468 个任务中 33 个执行、1435 个复用。
+- 暂存范围为 13 个源码、构建、测试及文档文件；签名私钥、密码、APK、生成 assets 和工具缓存均被忽略，不纳入提交，不创建公开 Release。
+- 16 KB ELF 未适配、Android 16 真机未验证的限制继续保留。

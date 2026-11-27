@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "build": "node tools/build.cjs",
+    "prepare:personal": "node tools/prepare-personal.cjs",
+    "test:personal": "node --test tests/bundled.test.cjs",
     "test": "node --test tests/sources.test.cjs tests/audiobooks.test.cjs",
     "test:live": "node tests/live.cjs",
     "test:albums": "node tests/albums.live.cjs",

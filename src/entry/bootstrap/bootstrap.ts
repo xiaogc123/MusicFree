@@ -25,6 +25,7 @@ import { PERMISSIONS, check, request } from "react-native-permissions";
 import RNTrackPlayer, { AppKilledPlaybackBehavior, Capability } from "react-native-track-player";
 import i18n from "@/core/i18n";
 import bootstrapAtom from "./bootstrap.atom";
+import setupBundledPlugins from "./bundledPlugins";
 import { getDefaultStore } from "jotai";
 
 
@@ -98,6 +99,7 @@ async function bootstrapImpl() {
 
     // 加载插件
     await PluginManager.setup();
+    await setupBundledPlugins();
     logger.mark("插件初始化完成");
     trace("插件初始化完成");
 

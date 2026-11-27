@@ -11,5 +11,6 @@
       "@/*": ["./src/*"]
     },
     "types": ["node"]
-  }
+  },
+  "exclude": ["**/Pods/**", "node_modules", "tmp"]
 }

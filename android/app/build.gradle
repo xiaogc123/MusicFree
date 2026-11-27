@@ -115,6 +115,15 @@ static def getVersion() {
 
 def appVersion = getVersion()
 def appVersionCode = 400011
+def personalBuild = project.findProperty('personalBuild') == 'true'
+
+if (personalBuild) {
+    def prepareBundledPlugins = tasks.register('prepareBundledPlugins', Exec) {
+        workingDir rootProject.projectDir.parentFile
+        commandLine 'node', 'plugins/tools/prepare-personal.cjs'
+    }
+    tasks.matching { it.name == 'preBuild' }.configureEach { dependsOn prepareBundledPlugins }
+}
 
 
 android {
@@ -126,6 +135,11 @@ android {
 
     defaultConfig {
         applicationId "fun.upup.musicfree"
+        if (personalBuild) {
+            applicationIdSuffix ".personal"
+            versionNameSuffix "-personal"
+        }
+        manifestPlaceholders.appLabel = personalBuild ? "MusicFree 个人版" : "@string/app_name"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode appVersionCode
@@ -140,10 +154,12 @@ android {
         }
         // !! Add lines
          release {
+          if (!personalBuild) {
             storeFile file(keystoreProperties['RELEASE_STORE_FILE'])
             storePassword keystoreProperties['RELEASE_STORE_PASSWORD']
             keyAlias keystoreProperties['RELEASE_KEY_ALIAS']
             keyPassword keystoreProperties['RELEASE_KEY_PASSWORD']
+          }
         }
     }
     splits {
@@ -151,8 +167,15 @@ android {
                 reset()
                 enable true
                 universalApk true
-                include "armeabi-v7a", "arm64-v8a", "x86", "x86_64"
+                if (personalBuild) {
+                    include "arm64-v8a"
+                } else {
+                    include "armeabi-v7a", "arm64-v8a", "x86", "x86_64"
+                }
             }
+    }
+    if (personalBuild) {
+        sourceSets.main.assets.srcDir('src/personal/assets')
     }
 
 
@@ -164,7 +187,7 @@ android {
         release {
             // Caution! In production, you need to generate your own keystore file.
             // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.release
+            signingConfig personalBuild ? null : signingConfigs.release
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }

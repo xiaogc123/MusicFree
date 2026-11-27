@@ -108,3 +108,5 @@ web-build/
 !/plugins/lrts/dist/
 /plugins/lrts/dist/*
 !/plugins/lrts/dist/plugin.js
+/android/app/src/personal/assets/bundled-plugins/
+/android/.signing-personal/
