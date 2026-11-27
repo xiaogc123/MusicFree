@@ -2,7 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const root = path.join(__dirname, '..');
-const sources = ['kugou', 'qq', 'bilibili', 'qishui'];
+const sources = ['kugou', 'qq', 'bilibili', 'qishui', 'ximalaya', 'lrts'];
 
 for (const name of sources) {
     const shared = fs.readFileSync(path.join(root, 'shared/api.js'), 'utf8');
@@ -20,7 +20,8 @@ for (const name of sources) {
     console.log('Built ' + name + '/dist/plugin.js (' + Buffer.byteLength(bundle) + ' bytes)');
 }
 
-const plugins = ['netease', ...sources].map(function (name) {
+// 懒人听书当前播放要求登录，保留构建供验证，不列入可用订阅。
+const plugins = ['netease', ...sources.filter(function (name) { return name !== 'lrts'; })].map(function (name) {
     const module = { exports: {} };
     vm.runInNewContext(fs.readFileSync(path.join(root, name, 'dist/plugin.js'), 'utf8'), {
         module, require: function (name) {
@@ -32,6 +33,6 @@ const plugins = ['netease', ...sources].map(function (name) {
     return { name: plugin.platform, version: plugin.version, url: plugin.srcUrl };
 });
 fs.writeFileSync(path.join(root, 'plugins.json'), JSON.stringify({
-    desc: '网易云、酷狗、QQ 音乐、bilibili、汽水匿名整曲独立音源订阅。', plugins,
+    desc: '网易云、酷狗、QQ 音乐、bilibili、汽水与喜马拉雅公开有声书订阅。', plugins,
 }, null, 2) + '\n');
 console.log('Generated plugins.json with ' + plugins.length + ' plugins');

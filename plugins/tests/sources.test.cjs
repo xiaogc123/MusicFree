@@ -335,7 +335,7 @@ test('酷狗取流返回短于原曲的片段时不能当作完整歌曲', async
 test('统一订阅仅引用存在的本地构建产物且版本一致', function () {
     const root = path.join(__dirname, '..');
     const subscription = JSON.parse(fs.readFileSync(path.join(root, 'plugins.json'), 'utf8'));
-    assert.equal(subscription.plugins.length, 5);
+    assert.equal(subscription.plugins.length, 6);
     for (const entry of subscription.plugins) {
         const pathname = new URL(entry.url).pathname;
         const match = pathname.match(/\/plugins\/(\w+)\/dist\/plugin\.js$/);

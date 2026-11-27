@@ -1,5 +1,5 @@
 {
-  "desc": "网易云、酷狗、QQ 音乐、bilibili、汽水匿名整曲独立音源订阅。",
+  "desc": "网易云、酷狗、QQ 音乐、bilibili、汽水与喜马拉雅公开有声书订阅。",
   "plugins": [
     {
       "name": "网易云音乐（匿名版）",
@@ -25,6 +25,11 @@
       "name": "汽水音乐（匿名整曲）",
       "version": "0.1.0",
       "url": "https://raw.githubusercontent.com/xiaogc123/MusicFree/refs/heads/master/plugins/qishui/dist/plugin.js"
+    },
+    {
+      "name": "喜马拉雅（公开有声书）",
+      "version": "0.1.0",
+      "url": "https://raw.githubusercontent.com/xiaogc123/MusicFree/refs/heads/master/plugins/ximalaya/dist/plugin.js"
     }
   ]
 }

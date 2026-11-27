@@ -1,6 +1,6 @@
 # MusicFree 独立音源订阅
 
-当前包含网易云、酷狗、QQ 音乐、bilibili、汽水五个独立插件。汽水采用匿名搜索与 SEO 整曲路线，仅播放能够确认完整时长、无明确加密标记的公开音源。
+本地可用订阅包含网易云、酷狗、QQ 音乐、bilibili、汽水及喜马拉雅六个独立插件。汽水仅播放能够确认完整时长、无明确加密标记的公开音源。懒人听书已有本地适配，但播放需要登录，未列入可用订阅。
 
 ## 构建与验证
 
@@ -11,9 +11,10 @@ npm run build
 npm test
 npm run test:live
 npm run test:albums
+npm run test:audiobooks
 ```
 
-上述构建打包四个新增插件，并根据各产物的名称、版本和 `srcUrl` 生成 `plugins.json`。网易云沿用其独立构建及测试：
+上述构建打包独立插件，并根据已验证可用产物的名称、版本和 `srcUrl` 生成 `plugins.json`；懒人听书只构建、不加入订阅。网易云沿用其独立构建及测试：
 
 ```powershell
 npm --prefix netease run build
@@ -24,7 +25,7 @@ npm --prefix netease test
 
 ## 安装
 
-可在 MusicFree「从本地安装插件」中分别选择各目录的 `dist/plugin.js`。`plugins.json` 是标准订阅清单，包含五个 JS 地址；在文件推送到仓库后，通过「订阅」添加以下地址并更新订阅：
+可在 MusicFree「从本地安装插件」中分别选择各目录的 `dist/plugin.js`。`plugins.json` 是标准订阅清单；在文件推送到仓库后，通过「订阅」添加以下地址并更新订阅：
 
 ```text
 https://raw.githubusercontent.com/xiaogc123/MusicFree/refs/heads/master/plugins/plugins.json
@@ -41,6 +42,9 @@ https://raw.githubusercontent.com/xiaogc123/MusicFree/refs/heads/master/plugins/
 | QQ 音乐 | 歌曲、正式专辑、songmid 单曲 | 匿名免费完整音源 | 原文、翻译 |
 | bilibili | 视频、视频专辑与全部分 P、BV 单曲 | 独立音频流 | 视频无原生歌曲歌词，返回无歌词 |
 | 汽水 | 歌曲、字符串 ID 单曲 | 可确认完整时长的匿名音源 | 原生歌词，纯音乐可无歌词 |
+| 喜马拉雅 | 书籍专辑、完整章节目录与详情 | 公开免费章节 | 无原生歌词 |
+
+有声书选择「专辑」搜索书名或主播，打开后按章播放。目录缺章或请求失败会明确报错；付费和试听章节不冒充完整音频。断点续听、连续播放及定时停止取决于宿主，插件不修改播放器。本轮喜马拉雅仅在本地加入订阅，尚未推送，线上仍为五源。
 
 新插件暂不提供歌单／收藏夹导入、登录或多音质。bilibili 不将字幕、标题猜测或其他版本歌词冒充当前视频歌词。接口未返回翻译时不会生成翻译。
 

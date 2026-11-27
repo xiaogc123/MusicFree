@@ -102,3 +102,9 @@ web-build/
 !/plugins/qishui/dist/
 /plugins/qishui/dist/*
 !/plugins/qishui/dist/plugin.js
+!/plugins/ximalaya/dist/
+/plugins/ximalaya/dist/*
+!/plugins/ximalaya/dist/plugin.js
+!/plugins/lrts/dist/
+/plugins/lrts/dist/*
+!/plugins/lrts/dist/plugin.js
