@@ -163,3 +163,89 @@ test('错误歌词字段不能被当作正常无歌词', async function () {
     await assert.rejects(plugin.getLyric({ id: '123' }), /结构/);
     await assert.rejects(plugin.getLyric({ id: '123' }), /结构/);
 });
+
+function sheet(ids, overrides = {}) {
+    return { code: 200, playlist: { id: 789, privacy: 0, trackCount: ids.length,
+        trackIds: ids.map(function (id) { return { id }; }), tracks: [], ...overrides } };
+}
+
+test('公开歌单 ID 和长链接均支持，按 ID 顺序而非详情响应顺序导入', async function () {
+    for (const input of ['789', 'https://music.163.com/playlist?id=789',
+        'https://music.163.com/#/playlist?id=789', 'https://music.163.com/m/playlist?id=789']) {
+        const { plugin } = load([sheet([123, 456]),
+            { code: 200, songs: [{ ...song, id: 456 }, song] }, sheet([123, 456])]);
+        const result = await plugin.importMusicSheet(input);
+        assert.deepEqual(Array.from(result, function (item) { return item.id; }), ['123', '456']);
+    }
+});
+
+test('1273 首大歌单跨批次完整导入，没有 1000 首上限', async function () {
+    const ids = Array.from({ length: 1273 }, function (_, index) { return 10000 + index; });
+    const responses = [sheet(ids, { tracks: [song] })];
+    for (let offset = 0; offset < ids.length; offset += 50) {
+        responses.push({ code: 200, songs: ids.slice(offset, offset + 50).reverse().map(function (id) {
+            return { ...song, id };
+        }) });
+    }
+    responses.push(sheet(ids));
+    const { plugin, calls } = load(responses);
+    const result = await plugin.importMusicSheet('789');
+    assert.deepEqual(Array.from(result, function (item) { return item.id; }), ids.map(String));
+    const batches = calls.filter(function (call) { return call.url.endsWith('/api/v3/song/detail'); });
+    assert.equal(batches.length, 26);
+    assert.equal(JSON.parse(batches[25].params.c).length, 23);
+});
+
+test('总数与 ID 列表不符、重复 ID、私密歌单或结构异常在详情请求前失败', async function () {
+    for (const response of [sheet([123], { trackCount: 1001 }), sheet([123, 123]),
+        sheet([123], { privacy: 10 }), sheet([123], { trackIds: null }),
+        sheet([123], { id: 999 }), { code: 200, playlist: {} }]) {
+        const { plugin, calls } = load([response]);
+        await assert.rejects(plugin.importMusicSheet('789'));
+        assert.equal(calls.length, 1);
+    }
+});
+
+test('空公开歌单正常返回空列表', async function () {
+    const { plugin } = load([sheet([]), sheet([])]);
+    assert.equal((await plugin.importMusicSheet('789')).length, 0);
+});
+
+test('缺失、重复、非请求歌曲和异常详情都不能作为完整歌单返回', async function () {
+    for (const songs of [[song], [song, song], [song, { ...song, id: 999 }],
+        [song, { id: 456 }]]) {
+        const { plugin } = load([sheet([123, 456]), { code: 200, songs }]);
+        await assert.rejects(plugin.importMusicSheet('789'));
+    }
+});
+
+test('后续批次网络失败时不返回第一批歌曲，并提示整次失败', async function () {
+    const ids = Array.from({ length: 51 }, function (_, index) { return 10000 + index; });
+    const { plugin } = load([sheet(ids), { code: 200, songs: ids.slice(0, 50).map(function (id) {
+        return { ...song, id };
+    }) }, new Error('network timeout')]);
+    await assert.rejects(plugin.importMusicSheet('789'), /歌单导入失败.*未返回部分歌曲/);
+});
+
+test('导入结束前再次核对歌单，增删或重排均整次失败', async function () {
+    for (const ids of [[123], [456, 123], [123, 456, 999]]) {
+        const { plugin } = load([sheet([123, 456]),
+            { code: 200, songs: [song, { ...song, id: 456 }] }, sheet(ids)]);
+        await assert.rejects(plugin.importMusicSheet('789'), /歌单.*变化/);
+    }
+});
+
+test('最终核对失败不能返回已取得的完整详情', async function () {
+    const { plugin } = load([sheet([123]), { code: 200, songs: [song] }, { code: 404 }]);
+    await assert.rejects(plugin.importMusicSheet('789'), /歌单导入失败.*未返回部分歌曲/);
+});
+
+test('歌单导入拒绝单曲、短链接和非官方域名，不发网络请求', async function () {
+    const { plugin, calls } = load();
+    for (const input of ['0', 'https://music.163.com/song?id=789', 'https://163cn.tv/abc',
+        'https://music.163.com.evil.test/playlist?id=789',
+        'https://music.163.com/#//evil.test/playlist?id=789']) {
+        await assert.rejects(plugin.importMusicSheet(input));
+    }
+    assert.equal(calls.length, 0);
+});

@@ -1,21 +1,28 @@
 const { request, HEADERS } = require('./api');
 const { PLATFORM, songId, toMusicItem, importedSongId } = require('./mapper');
+const { importMusicSheet } = require('./playlist');
 
 const PAGE_SIZE = 30;
 
 module.exports = {
     platform: PLATFORM,
-    version: '0.1.1',
+    version: '0.2.0',
     srcUrl: 'https://raw.githubusercontent.com/xiaogc123/MusicFree/master/plugins/netease/dist/plugin.js',
     author: 'xiaogc',
-    description: '匿名搜索、标准音质播放、原文与翻译歌词、单曲导入。歌曲可用性取决于网易云返回结果。',
+    description: '匿名搜索、标准音质播放、原文与翻译歌词、单曲及公开歌单完整导入。歌曲可用性取决于网易云返回结果。',
     primaryKey: ['id'],
     supportedSearchType: ['music'],
     defaultSearchType: 'music',
     cacheControl: 'no-cache',
     hints: {
         importMusicItem: ['支持歌曲 ID、music.163.com/song?id=数字及官网 hash 歌曲链接。短链接需先在浏览器展开。'],
+        importMusicSheet: [
+            '支持公开歌单 ID、music.163.com/playlist?id=数字及官网 hash 歌单链接，短链接需先展开。',
+            '大歌单分批获取，耗时较长；缺歌、请求失败或歌单变化时整次失败，不导入部分歌曲。',
+        ],
     },
+
+    importMusicSheet,
 
     async search(query, page, type) {
         query = String(query == null ? '' : query).trim();

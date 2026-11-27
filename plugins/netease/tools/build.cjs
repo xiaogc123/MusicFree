@@ -3,7 +3,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 
 const root = path.join(__dirname, '..');
-const modules = ['api', 'mapper', 'index'].map(function (name) {
+const modules = ['api', 'mapper', 'playlist', 'index'].map(function (name) {
     const filename = path.join(root, 'src', name + '.js');
     const source = fs.readFileSync(filename, 'utf8');
     new vm.Script(source, { filename });

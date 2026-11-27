@@ -2,6 +2,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
+const playlistSnapshots = [];
 
 // 仅用于 Node.js 联网验证。运行时由 MusicFree 提供真正的 Axios。
 const axios = {
@@ -15,7 +16,15 @@ const axios = {
             signal: AbortSignal.timeout(options.timeout),
         });
         if (!response.ok) throw new Error('HTTP ' + response.status);
-        return { data: await response.json() };
+        const data = await response.json();
+        if (target.pathname === '/api/v6/playlist/detail' && data.playlist) {
+            playlistSnapshots.push({
+                count: data.playlist.trackCount,
+                ids: data.playlist.trackIds.map(function (track) { return String(track.id); }),
+                details: data.playlist.tracks.length,
+            });
+        }
+        return { data };
     },
 };
 
@@ -73,6 +82,18 @@ async function main() {
         throw error;
     }
     assert.equal(await plugin.getMediaSource({ id }, 'high'), null);
+    for (const sheetId of ['7044354223', '24381616']) {
+        playlistSnapshots.length = 0;
+        const songs = await plugin.importMusicSheet('https://music.163.com/playlist?id=' + sheetId);
+        assert.equal(playlistSnapshots.length, 2, '导入前后均需核对完整歌单');
+        const initial = playlistSnapshots[0];
+        assert.equal(songs.length, initial.count, '导入数量必须等于源歌单总数');
+        assert.deepEqual(Array.from(songs, function (song) { return song.id; }), initial.ids,
+            '每首歌曲及顺序必须与源歌单一致');
+        if (sheetId === '24381616') assert.ok(songs.length > 1000, '大歌单样本应超过 1000 首');
+        console.log(JSON.stringify({ check: 'playlist', id: sheetId, expected: initial.count,
+            initialDetails: initial.details, imported: songs.length, orderedIdsMatch: true }));
+    }
     console.log('Live checks passed. Android playback and host Axios remain to be verified.');
 }
 

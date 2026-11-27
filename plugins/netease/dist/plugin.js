@@ -62,49 +62,127 @@ function toMusicItem(song) {
     };
 }
 
-function importedSongId(value) {
+function importedMediaId(value, kind, label) {
     const input = String(value == null ? '' : value).trim();
     if (/^\d+$/.test(input)) return songId(input);
     let url;
     try {
         url = new URL(input);
     } catch (_) {
-        throw new Error('请输入歌曲 ID 或网易云歌曲完整链接');
+        throw new Error('请输入' + label + ' ID 或网易云' + label + '完整链接');
     }
     if (!['http:', 'https:'].includes(url.protocol) || url.hostname !== 'music.163.com' ||
         url.username || url.password || url.port) {
-        throw new Error('仅支持 music.163.com 的歌曲完整链接，短链接请先在浏览器展开');
+        throw new Error('仅支持 music.163.com 的完整链接，短链接请先在浏览器展开');
     }
     // 官网分享链接可将 /song?id=... 放在 hash 中。
     if (url.hash.startsWith('#/')) url = new URL(url.hash.slice(1), url.origin);
-    if (!['/song', '/m/song'].includes(url.pathname)) {
-        throw new Error('链接不是网易云歌曲链接');
+    if (url.hostname !== 'music.163.com' || !['/' + kind, '/m/' + kind].includes(url.pathname)) {
+        throw new Error('链接不是网易云' + label + '链接');
     }
     return songId(url.searchParams.get('id'));
 }
 
-module.exports = { PLATFORM, songId, toMusicItem, importedSongId };
+function importedSongId(value) {
+    return importedMediaId(value, 'song', '歌曲');
+}
+
+function importedSheetId(value) {
+    return importedMediaId(value, 'playlist', '歌单');
+}
+
+module.exports = { PLATFORM, songId, toMusicItem, importedSongId, importedSheetId };
+
+},
+"./playlist": function (module, exports, require) {
+const { request } = require('./api');
+const { songId, toMusicItem, importedSheetId } = require('./mapper');
+
+// GET 请求分成小批，避免长 ID 列表超过 URL 长度限制；总曲目数不设上限。
+const DETAIL_BATCH_SIZE = 50;
+
+async function getTrackIds(id) {
+    const data = await request('/api/v6/playlist/detail', { id, n: 100000, s: 0 });
+    const playlist = data.playlist;
+    if (!playlist || songId(playlist.id) !== id || playlist.privacy !== 0 ||
+        !Number.isSafeInteger(playlist.trackCount) || playlist.trackCount < 0 ||
+        !Array.isArray(playlist.trackIds)) {
+        throw new Error('歌单不存在、非公开或响应结构异常');
+    }
+    const ids = playlist.trackIds.map(function (track) { return songId(track.id); });
+    if (ids.length !== playlist.trackCount || new Set(ids).size !== ids.length) {
+        throw new Error('歌单 ID 列表不完整或存在重复，已停止导入（取得 ' +
+            ids.length + '/' + playlist.trackCount + ' 首）');
+    }
+    return ids;
+}
+
+async function importMusicSheet(input) {
+    const id = importedSheetId(input);
+    try {
+        const ids = await getTrackIds(id);
+        const result = [];
+        for (let offset = 0; offset < ids.length; offset += DETAIL_BATCH_SIZE) {
+            const batch = ids.slice(offset, offset + DETAIL_BATCH_SIZE);
+            const data = await request('/api/v3/song/detail', {
+                c: JSON.stringify(batch.map(function (id) { return { id: Number(id) }; })),
+            });
+            if (!Array.isArray(data.songs)) throw new Error('歌单歌曲详情响应结构异常');
+            const songs = new Map();
+            const expectedIds = new Set(batch);
+            for (const song of data.songs) {
+                const item = toMusicItem(song);
+                if (!expectedIds.has(item.id) || songs.has(item.id)) {
+                    throw new Error('歌单歌曲详情返回了非请求歌曲或重复歌曲');
+                }
+                songs.set(item.id, item);
+            }
+            const missing = batch.filter(function (id) { return !songs.has(id); });
+            if (missing.length) {
+                throw new Error('歌单歌曲详情缺失 ' + missing.length + ' 首，首个缺失 ID：' + missing[0]);
+            }
+            for (const id of batch) result.push(songs.get(id));
+        }
+        // 分批期间歌单可能被编辑，最终重新核对完整 ID 序列，防止混合不同版本。
+        const latestIds = await getTrackIds(id);
+        if (latestIds.length !== ids.length || latestIds.some(function (id, index) { return id !== ids[index]; })) {
+            throw new Error('歌单在导入期间发生变化，请稍后重新导入');
+        }
+        return result;
+    } catch (error) {
+        throw new Error('歌单导入失败，未返回部分歌曲：' + error.message);
+    }
+}
+
+module.exports = { importMusicSheet };
 
 },
 "./index": function (module, exports, require) {
 const { request, HEADERS } = require('./api');
 const { PLATFORM, songId, toMusicItem, importedSongId } = require('./mapper');
+const { importMusicSheet } = require('./playlist');
 
 const PAGE_SIZE = 30;
 
 module.exports = {
     platform: PLATFORM,
-    version: '0.1.1',
+    version: '0.2.0',
     srcUrl: 'https://raw.githubusercontent.com/xiaogc123/MusicFree/master/plugins/netease/dist/plugin.js',
     author: 'xiaogc',
-    description: '匿名搜索、标准音质播放、原文与翻译歌词、单曲导入。歌曲可用性取决于网易云返回结果。',
+    description: '匿名搜索、标准音质播放、原文与翻译歌词、单曲及公开歌单完整导入。歌曲可用性取决于网易云返回结果。',
     primaryKey: ['id'],
     supportedSearchType: ['music'],
     defaultSearchType: 'music',
     cacheControl: 'no-cache',
     hints: {
         importMusicItem: ['支持歌曲 ID、music.163.com/song?id=数字及官网 hash 歌曲链接。短链接需先在浏览器展开。'],
+        importMusicSheet: [
+            '支持公开歌单 ID、music.163.com/playlist?id=数字及官网 hash 歌单链接，短链接需先展开。',
+            '大歌单分批获取，耗时较长；缺歌、请求失败或歌单变化时整次失败，不导入部分歌曲。',
+        ],
     },
+
+    importMusicSheet,
 
     async search(query, page, type) {
         query = String(query == null ? '' : query).trim();

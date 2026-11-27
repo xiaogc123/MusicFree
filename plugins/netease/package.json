@@ -1,6 +1,6 @@
 {
   "name": "musicfree-netease",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "private": true,
   "description": "MusicFree 网易云匿名音源插件",
   "main": "dist/plugin.js",

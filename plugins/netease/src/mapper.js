@@ -27,25 +27,33 @@ function toMusicItem(song) {
     };
 }
 
-function importedSongId(value) {
+function importedMediaId(value, kind, label) {
     const input = String(value == null ? '' : value).trim();
     if (/^\d+$/.test(input)) return songId(input);
     let url;
     try {
         url = new URL(input);
     } catch (_) {
-        throw new Error('请输入歌曲 ID 或网易云歌曲完整链接');
+        throw new Error('请输入' + label + ' ID 或网易云' + label + '完整链接');
     }
     if (!['http:', 'https:'].includes(url.protocol) || url.hostname !== 'music.163.com' ||
         url.username || url.password || url.port) {
-        throw new Error('仅支持 music.163.com 的歌曲完整链接，短链接请先在浏览器展开');
+        throw new Error('仅支持 music.163.com 的完整链接，短链接请先在浏览器展开');
     }
     // 官网分享链接可将 /song?id=... 放在 hash 中。
     if (url.hash.startsWith('#/')) url = new URL(url.hash.slice(1), url.origin);
-    if (!['/song', '/m/song'].includes(url.pathname)) {
-        throw new Error('链接不是网易云歌曲链接');
+    if (url.hostname !== 'music.163.com' || !['/' + kind, '/m/' + kind].includes(url.pathname)) {
+        throw new Error('链接不是网易云' + label + '链接');
     }
     return songId(url.searchParams.get('id'));
 }
 
-module.exports = { PLATFORM, songId, toMusicItem, importedSongId };
+function importedSongId(value) {
+    return importedMediaId(value, 'song', '歌曲');
+}
+
+function importedSheetId(value) {
+    return importedMediaId(value, 'playlist', '歌单');
+}
+
+module.exports = { PLATFORM, songId, toMusicItem, importedSongId, importedSheetId };
