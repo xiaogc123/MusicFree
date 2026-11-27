@@ -4,6 +4,27 @@ const { importMusicSheet } = require('./playlist');
 
 const PAGE_SIZE = 30;
 
+function toAlbumItem(album) {
+    const id = songId(album.id);
+    if (!album.name || !Number.isSafeInteger(album.size) || album.size < 0) throw new Error('网易云专辑信息异常');
+    return { platform: PLATFORM, id, title: album.name, artwork: album.picUrl || '',
+        artist: (album.artists || (album.artist ? [album.artist] : [])).map(function (a) { return a.name; }).join(' / '),
+        description: album.description || '', worksNum: album.size };
+}
+
+async function getAlbumInfo(item, page = 1) {
+    const id = songId(item.id);
+    if (!Number.isSafeInteger(page) || page < 1) throw new Error('专辑页码必须是从 1 开始的整数');
+    if (page > 1) return { musicList: [], isEnd: true };
+    const data = await request('/api/v1/album/' + id, {});
+    if (!data.album || String(data.album.id) !== id || !Array.isArray(data.songs)) throw new Error('网易云专辑详情异常');
+    const albumItem = toAlbumItem(data.album);
+    const musicList = data.songs.map(toMusicItem);
+    if (musicList.length !== albumItem.worksNum || new Set(musicList.map(function (s) { return s.id; })).size !== musicList.length ||
+        (item.worksNum != null && item.worksNum !== musicList.length)) throw new Error('网易云专辑曲目缺失、重复或数量变化');
+    return { albumItem, musicList, isEnd: true };
+}
+
 async function getMusicInfo(musicItem) {
     const id = songId(musicItem.id);
     const data = await request('/api/v3/song/detail', { c: '[{"id":' + id + '}]' });
@@ -15,12 +36,12 @@ async function getMusicInfo(musicItem) {
 
 module.exports = {
     platform: PLATFORM,
-    version: '0.2.1',
+    version: '0.3.0',
     srcUrl: 'https://raw.githubusercontent.com/xiaogc123/MusicFree/master/plugins/netease/dist/plugin.js',
     author: 'xiaogc',
-    description: '匿名搜索、标准音质播放、原文与翻译歌词、单曲及公开歌单完整导入。歌曲可用性取决于网易云返回结果。',
+    description: '歌曲与专辑搜索、完整专辑详情、标准音质播放、原文与翻译歌词、单曲及公开歌单完整导入。歌曲可用性取决于网易云返回结果。',
     primaryKey: ['id'],
-    supportedSearchType: ['music'],
+    supportedSearchType: ['music', 'album'],
     defaultSearchType: 'music',
     cacheControl: 'no-cache',
     hints: {
@@ -33,15 +54,23 @@ module.exports = {
 
     importMusicSheet,
     getMusicInfo,
+    getAlbumInfo,
 
     async search(query, page, type) {
         query = String(query == null ? '' : query).trim();
-        if (!query || (type && type !== 'music')) return { data: [], isEnd: true };
+        if (!query || (type && !['music', 'album'].includes(type))) return { data: [], isEnd: true };
         if (!Number.isSafeInteger(page) || page < 1) throw new Error('搜索页码必须是从 1 开始的整数');
         const data = await request('/api/search/get/web', {
-            s: query, type: 1, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE,
+            s: query, type: type === 'album' ? 10 : 1, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE,
         });
         const result = data.result;
+        if (type === 'album') {
+            if (!result || !Number.isSafeInteger(result.albumCount) || result.albumCount < 0 ||
+                (result.albums !== undefined && !Array.isArray(result.albums)) ||
+                (result.albums === undefined && result.albumCount !== 0)) throw new Error('网易云专辑搜索响应异常');
+            const albums = result.albums || [];
+            return { data: albums.map(toAlbumItem), isEnd: albums.length < PAGE_SIZE || page * PAGE_SIZE >= result.albumCount };
+        }
         if (!result || !Number.isSafeInteger(result.songCount) || result.songCount < 0 ||
             (result.songs !== undefined && !Array.isArray(result.songs)) ||
             (result.songs === undefined && result.songCount !== 0)) {

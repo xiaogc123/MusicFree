@@ -24,13 +24,37 @@ function load(responses = []) {
 const song = { id: 123, name: '歌曲', ar: [{ name: '歌手甲' }, { name: '歌手乙' }],
     al: { name: '专辑', picUrl: 'https://example.com/cover.jpg' }, dt: 123400 };
 
+test('专辑搜索使用 type 10，详情校验数量并返回全部曲目', async function () {
+    const album = { id: 456, name: '专辑', size: 1, artist: { name: '歌手' }, picUrl: 'https://img.test/a.jpg' };
+    const { plugin, calls } = load([{ code: 200, result: { albums: [album], albumCount: 1 } },
+        { code: 200, album, songs: [song] }]);
+    const item = (await plugin.search('林俊杰', 1, 'album')).data[0];
+    assert.equal(calls[0].params.type, 10);
+    assert.equal(item.id, '456');
+    const result = await plugin.getAlbumInfo(item, 1);
+    assert.equal(result.musicList[0].id, '123');
+    assert.equal(result.albumItem.worksNum, 1);
+    assert.equal(result.isEnd, true);
+    assert.equal((await plugin.getAlbumInfo(item, 2)).musicList.length, 0);
+    assert.equal(calls.length, 2);
+});
+
+test('专辑缺歌、重复歌曲或身份不符时整次失败', async function () {
+    for (const data of [{ album: { id: 456, name: '专辑', size: 2 }, songs: [song] },
+        { album: { id: 789, name: '专辑', size: 1 }, songs: [song] },
+        { album: { id: 456, name: '专辑', size: 2 }, songs: [song, song] }]) {
+        const { plugin } = load([{ code: 200, ...data }]);
+        await assert.rejects(plugin.getAlbumInfo({ id: '456' }, 1));
+    }
+});
+
 test('构建产物导出首版契约', function () {
     const { plugin } = load();
     assert.equal(plugin.platform, '网易云音乐（匿名版）');
     for (const method of ['search', 'getMediaSource', 'getLyric', 'importMusicItem']) {
         assert.equal(typeof plugin[method], 'function');
     }
-    assert.deepEqual(Array.from(plugin.supportedSearchType), ['music']);
+    assert.deepEqual(Array.from(plugin.supportedSearchType), ['music', 'album']);
 });
 
 test('搜索映射歌曲信息并按总数结束第二页', async function () {
@@ -53,7 +77,7 @@ test('满页且有后续歌曲时继续分页', async function () {
 test('空关键词和未支持类型不请求网络', async function () {
     const { plugin, calls } = load();
     assert.equal((await plugin.search(' ', 1, 'music')).data.length, 0);
-    assert.equal((await plugin.search('歌曲', 1, 'album')).data.length, 0);
+    assert.equal((await plugin.search('歌曲', 1, 'artist')).data.length, 0);
     assert.equal(calls.length, 0);
     await assert.rejects(plugin.search('歌曲', 0, 'music'), /页码/);
 });

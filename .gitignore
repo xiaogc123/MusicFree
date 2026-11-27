@@ -89,3 +89,16 @@ dist/
 /plugins/netease/dist/*
 !/plugins/netease/dist/plugin.js
 web-build/
+# Tracked independent music plugin artifacts
+!/plugins/kugou/dist/
+/plugins/kugou/dist/*
+!/plugins/kugou/dist/plugin.js
+!/plugins/qq/dist/
+/plugins/qq/dist/*
+!/plugins/qq/dist/plugin.js
+!/plugins/bilibili/dist/
+/plugins/bilibili/dist/*
+!/plugins/bilibili/dist/plugin.js
+!/plugins/qishui/dist/
+/plugins/qishui/dist/*
+!/plugins/qishui/dist/plugin.js
