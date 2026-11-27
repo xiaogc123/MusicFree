@@ -41,4 +41,6 @@
 - 已验证：插件 `0.1.1` 构建成功，16/16 离线回归及真实接口验证通过；产物版本与包版本一致，`srcUrl` 指向当前仓库的 Raw 文件。
 - 已配置：仅放行网易云 `dist/plugin.js` 的忽略规则，其他构建产物继续忽略。
 - 在线安装地址：`https://raw.githubusercontent.com/xiaogc123/MusicFree/master/plugins/netease/dist/plugin.js`。
-- 待验证：远端推送和 Raw 文件一致性；Android 端内验收仍待完成。
+- 已验证：功能提交 `459053d` 已推送至 `origin/master`，Raw 地址匿名访问返回 HTTP 200，7417 字节，与本地构建产物逐字节一致。
+- 产物 SHA-256：`2450359c73663c0d028456af193d6782dd7f1bfcf212e303427d7993e464dc82`。
+- 待验证：Android 端内安装、宿主环境与实际播放验收。
