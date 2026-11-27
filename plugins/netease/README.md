@@ -12,6 +12,12 @@ https://raw.githubusercontent.com/xiaogc123/MusicFree/master/plugins/netease/dis
 
 插件 `srcUrl` 指向同一地址，支持应用内检查更新。后续修改需递增 `src/index.js` 与 `package.json` 的版本号，重新构建，并将源码与 `dist/plugin.js` 一同提交。仅该插件产物加入版本管理，其他构建输出仍忽略。
 
+若推送后原地址仍命中旧版缓存，可用同一分支的完整引用地址安装：
+
+```text
+https://raw.githubusercontent.com/xiaogc123/MusicFree/refs/heads/master/plugins/netease/dist/plugin.js
+```
+
 ## 构建与验证
 
 在本目录使用 Node.js 18 及以上版本执行，无需安装依赖：
