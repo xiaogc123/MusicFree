@@ -85,4 +85,7 @@ scripts/
 # Expo
 .expo
 dist/
+!/plugins/netease/dist/
+/plugins/netease/dist/*
+!/plugins/netease/dist/plugin.js
 web-build/
