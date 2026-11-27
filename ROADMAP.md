@@ -2,7 +2,7 @@
 
 ## 当前阶段
 
-六源插件与订阅已推送，懒人听书仍受登录限制。个人版内置六源 ARM64 APK 已构建、个人签名并核对；当前 15 个原生库均未支持 16 KB 对齐，仅交付用户确认的个人测试包，Android 16 真机验收未完成。本轮个人版代码尚未提交推送。
+六源插件与订阅已推送，懒人听书仍受登录限制。个人版内置六源 ARM64 APK 已构建、个人签名并核对，源码已推送至独立分支 `codex/personal-apk`；当前 15 个原生库均未支持 16 KB 对齐，仅交付用户确认的个人测试包，Android 16 真机验收未完成。
 
 ## 已完成
 
@@ -235,7 +235,7 @@
 - 用户确认暂无设备，先生成 APK，不进行 Android 16 真机验收。
 - Hermes AAR 的 Maven Central 下载速度异常缓慢，改从项目已有阿里云镜像预取相同 React／Hermes `0.76.5` 发布包，均核对原始 Maven 模块元数据 SHA-512 一致；使用 React Native 自带 `react.internal.mavenLocalRepo` 参数指向忽略目录，不修改依赖版本。
 - 静态检查已确认当前 React／Hermes 预编译核心库共 7 个 ARM64 `.so` 未达到 16 KB ELF 对齐，因此个人包只能作为尚待实机验证的测试包，不宣称完整 Android 16／16 KB 兼容；升级播放器基础依赖需另行规划。
-- 用户已确认签名当前测试包，已生成仅本地保存的个人签名材料及签名 APK；源码尚未提交或推送。Android 16 真机／模拟器验收未完成，16 KB ELF 对齐检查未通过。
+- 用户已确认签名当前测试包，已生成仅本地保存的个人签名材料及签名 APK；源码已提交并推送至个人版独立分支。Android 16 真机／模拟器验收未完成，16 KB ELF 对齐检查未通过。
 - ARM64 未签名产物 `android/app/build/outputs/apk/release/app-arm64-v8a-release-unsigned.apk`，18192178 字节，SHA-256：`20a97fcf8f2120f091def37b4312aed3128d7f5811f49118684bcf5f86cb290a`。
 - 成品 ZIP 完整性通过；六个内置 JS 与已验证产物逐字一致，Hermes 字节码中包含个人版初始化入口。实际二进制清单：包名 `fun.upup.musicfree.personal`、版本 `0.6.2-personal`、minSdk 24、targetSdk 30、compileSdk 35，仅 ARM64；Provider 均使用个人包名前缀。
 - APK 中最终 15 个 ARM64 原生库均未达到 16 KB ELF 对齐。当前不是通用 Android 16／16 KB 兼容交付；已明确告知用户，用户选择“允许签名当前个人测试包”，授权创建仅本地保存的个人签名材料。
@@ -249,3 +249,8 @@
 - 提交前 TypeScript 检查与 99 项回归再次通过；个人版 ARM64 `assembleRelease` 再次 `BUILD SUCCESSFUL`，1468 个任务中 33 个执行、1435 个复用。
 - 暂存范围为 13 个源码、构建、测试及文档文件；签名私钥、密码、APK、生成 assets 和工具缓存均被忽略，不纳入提交，不创建公开 Release。
 - 16 KB ELF 未适配、Android 16 真机未验证的限制继续保留。
+
+### 个人版独立分支推送验收（2026-11-27）
+
+- 功能提交 `e3e7710` 已推送至 `origin/codex/personal-apk`，分支跟踪关系已建立。
+- `master` 仍为 `0fd63bd`，未合并个人版代码；未上传 APK、私钥、密码或构建缓存，未创建 Release。
