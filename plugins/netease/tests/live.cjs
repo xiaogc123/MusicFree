@@ -43,6 +43,20 @@ async function main() {
         assert.equal(item.platform, plugin.platform);
     }
     console.log(JSON.stringify({ check: 'search', count: result.data.length, isEnd: result.isEnd }));
+    const searchedItem = result.data.find(function (item) { return !item.artwork; }) || result.data[0];
+    const info = await plugin.getMusicInfo(searchedItem);
+    assert.equal(info.id, searchedItem.id, '补齐必须保持原歌曲身份');
+    assert.ok(info.artwork, '详情应补齐歌曲封面');
+    assert.match(info.artwork, /^https?:\/\//);
+    const coverResponse = await fetch(info.artwork, { signal: AbortSignal.timeout(15000) });
+    try {
+        assert.ok(coverResponse.ok, '封面地址应可访问');
+        assert.match(coverResponse.headers.get('content-type'), /image\//);
+    } finally {
+        if (coverResponse.body) await coverResponse.body.cancel();
+    }
+    console.log(JSON.stringify({ check: 'getMusicInfo', id: info.id,
+        searchHasCover: !!searchedItem.artwork, detailHasCover: !!info.artwork, coverStatus: coverResponse.status }));
     const secondPage = await plugin.search('欢乐颂', 2, 'music');
     assert.ok(secondPage.data.length > 0, '第二页应有歌曲');
     assert.notEqual(secondPage.data[0].id, result.data[0].id, '不同页应请求不同数据');

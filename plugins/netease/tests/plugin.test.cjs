@@ -249,3 +249,52 @@ test('歌单导入拒绝单曲、短链接和非官方域名，不发网络请�
     }
     assert.equal(calls.length, 0);
 });
+
+test('真实搜索字段缺少封面时，getMusicInfo 补齐封面且保持歌曲身份', async function () {
+    const searchSong = { id: 123, name: '歌曲', artists: [{ name: '歌手甲' }],
+        album: { id: 42, name: '专辑', picId: 123456 }, duration: 123400 };
+    const { plugin, calls } = load([
+        { code: 200, result: { songs: [searchSong], songCount: 1 } },
+        { code: 200, songs: [song] },
+    ]);
+    const item = (await plugin.search('歌曲', 1, 'music')).data[0];
+    assert.equal(item.artwork, '');
+    assert.equal(calls.length, 1, '搜索不为每首歌发起详情请求');
+    const info = await plugin.getMusicInfo(item);
+    const merged = { ...item, ...info };
+    assert.equal(merged.id, item.id);
+    assert.equal(merged.platform, item.platform);
+    assert.equal(merged.artwork, 'https://example.com/cover.jpg');
+    assert.equal(merged.title, '歌曲');
+    assert.equal(merged.artist, '歌手甲 / 歌手乙');
+    assert.equal(merged.duration, 123.4);
+    assert.ok(calls[1].url.endsWith('/api/v3/song/detail'));
+    assert.equal(calls[1].params.c, '[{"id":123}]');
+});
+
+test('getMusicInfo 只需 ID，并按目标 ID 选择详情', async function () {
+    const { plugin } = load([{ code: 200, songs: [{ ...song, id: 999 }, song] }]);
+    const info = await plugin.getMusicInfo({ id: '123' });
+    assert.equal(info.id, '123');
+    assert.equal(info.artwork, 'https://example.com/cover.jpg');
+});
+
+test('getMusicInfo 的缺失歌曲和错误结构不能覆盖已有歌曲信息', async function () {
+    for (const response of [{ code: 200, songs: [] }, { code: 200 },
+        { code: 200, songs: [{ ...song, id: 999 }] }, { code: 200, songs: [{ id: 123 }] },
+        { code: 404 }]) {
+        const { plugin } = load([response]);
+        await assert.rejects(plugin.getMusicInfo({ id: '123' }));
+    }
+});
+
+test('getMusicInfo 拒绝非法 ID，网络失败不暴露请求内容', async function () {
+    const { plugin, calls } = load([new Error('secret-cookie private-url')]);
+    await assert.rejects(plugin.getMusicInfo({ id: 'bad' }), /ID/);
+    assert.equal(calls.length, 0);
+    await assert.rejects(plugin.getMusicInfo({ id: '123' }), function (error) {
+        assert.match(error.message, /网络|超时/);
+        assert.doesNotMatch(error.message, /secret|private/);
+        return true;
+    });
+});

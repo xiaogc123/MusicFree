@@ -4,9 +4,18 @@ const { importMusicSheet } = require('./playlist');
 
 const PAGE_SIZE = 30;
 
+async function getMusicInfo(musicItem) {
+    const id = songId(musicItem.id);
+    const data = await request('/api/v3/song/detail', { c: '[{"id":' + id + '}]' });
+    if (!Array.isArray(data.songs)) throw new Error('网易云歌曲详情响应结构异常');
+    const song = data.songs.find(function (item) { return String(item.id) === id; });
+    if (!song) throw new Error('该歌曲不存在或暂不可用');
+    return toMusicItem(song);
+}
+
 module.exports = {
     platform: PLATFORM,
-    version: '0.2.0',
+    version: '0.2.1',
     srcUrl: 'https://raw.githubusercontent.com/xiaogc123/MusicFree/master/plugins/netease/dist/plugin.js',
     author: 'xiaogc',
     description: '匿名搜索、标准音质播放、原文与翻译歌词、单曲及公开歌单完整导入。歌曲可用性取决于网易云返回结果。',
@@ -23,6 +32,7 @@ module.exports = {
     },
 
     importMusicSheet,
+    getMusicInfo,
 
     async search(query, page, type) {
         query = String(query == null ? '' : query).trim();
@@ -78,11 +88,6 @@ module.exports = {
     },
 
     async importMusicItem(input) {
-        const id = importedSongId(input);
-        const data = await request('/api/v3/song/detail', { c: '[{"id":' + id + '}]' });
-        if (!Array.isArray(data.songs)) throw new Error('网易云歌曲详情响应结构异常');
-        const song = data.songs.find(function (item) { return String(item.id) === id; });
-        if (!song) throw new Error('该歌曲不存在或暂不可用');
-        return toMusicItem(song);
+        return getMusicInfo({ id: importedSongId(input) });
     },
 };
